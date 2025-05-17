@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重庆公交10路晚高峰优化分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.0/echarts.min.js"></script>
+    
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#FF7D00',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        neutral: {
+                            100: '#F2F3F5',
+                            200: '#E5E6EB',
+                            300: '#C9CDD4',
+                            400: '#86909C',
+                            500: '#4E5969',
+                            600: '#272E3B',
+                            700: '#1D2129',
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+            }
+            .hover-scale {
+                transition: transform 0.3s ease;
+            }
+            .hover-scale:hover {
+                transform: scale(1.02);
+            }
+            .section-fade {
+                opacity: 0;
+                transform: translateY(20px);
+                transition: opacity 0.6s ease, transform 0.6s ease;
+            }
+            .section-fade.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .animate-value {
+                transition: all 1s ease-out;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-neutral-700">
+    <!-- 导航栏 -->
+    <header class="fixed w-full top-0 z-50 transition-all duration-300" id="navbar">
+        <div class="bg-white/90 backdrop-blur-md shadow-sm">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-bus text-primary text-2xl mr-3"></i>
+                        <span class="text-xl font-bold text-primary">重庆公交10路优化分析</span>
+                    </div>
+                    <nav class="hidden md:flex space-x-8">
+                        <a href="#current-situation" class="text-neutral-600 hover:text-primary transition-colors font-medium">运行现状</a>
+                        <a href="#optimization-scheme" class="text-neutral-600 hover:text-primary transition-colors font-medium">优化方案</a>
+                        <a href="#comparison" class="text-neutral-600 hover:text-primary transition-colors font-medium">方案对比</a>
+                    </nav>
+                    <div class="md:hidden">
+                        <button id="menu-toggle" class="text-neutral-600 hover:text-primary">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 移动端菜单 -->
+        <div id="mobile-menu" class="hidden bg-white shadow-lg absolute w-full">
+            <div class="px-4 py-3 space-y-3">
+                <a href="#current-situation" class="block text-neutral-600 hover:text-primary py-2 transition-colors">运行现状</a>
+                <a href="#optimization-scheme" class="block text-neutral-600 hover:text-primary py-2 transition-colors">优化方案</a>
+                <a href="#comparison" class="block text-neutral-600 hover:text-primary py-2 transition-colors">方案对比</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        <!-- 标题区域 -->
+        <section class="text-center mb-16">
+            <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-neutral-800 mb-4">重庆公交10路晚高峰优化分析</h1>
+            <p class="text-[clamp(1rem,2vw,1.25rem)] text-neutral-500 max-w-3xl mx-auto">基于客流分布和运行效率的深度分析，提供科学优化方案，提升公交服务质量</p>
+            <div class="w-24 h-1 bg-primary rounded-full mx-auto mt-6"></div>
+        </section>
+
+        <!-- 现状分析 -->
+        <section id="current-situation" class="mb-20 section-fade">
+            <div class="flex flex-col md:flex-row justify-between items-start mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-neutral-800 flex items-center">
+                    <span class="bg-primary text-white p-2 rounded-lg mr-3">01</span>
+                    晚高峰运行现状分析
+                </h2>
+                <div class="hidden md:block h-1 bg-gray-200 flex-grow mx-4 mt-6"></div>
+                <div class="md:w-64 mt-4 md:mt-0">
+                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-exclamation-circle text-primary mr-2"></i>
+                            <span class="font-medium">核心问题</span>
+                        </div>
+                        <p class="text-sm text-neutral-600 mt-2">客流分布不均，部分路段拥堵严重，运行效率低</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 客流特征 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                <div class="bg-white rounded-xl p-6 card-shadow hover-scale">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <i class="fa-solid fa-people-flow text-primary text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-neutral-800 ml-4">客流特征</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-primary/10 p-1.5 rounded-full mt-1">
+                                <i class="fa-solid fa-circle-dot text-primary text-sm"></i>
+                            </div>
+                            <p class="ml-3 text-neutral-600">
+                                <strong class="font-semibold">分布不均衡</strong>：上行起点站及巴南大道上客集中，下行起点站（磁器街）上客量达25人；轨道接驳站（麒龙站、四公里）上下客量大，会展中心存在空驶
+                            </p>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-primary/10 p-1.5 rounded-full mt-1">
+                                <i class="fa-solid fa-circle-dot text-primary text-sm"></i>
+                            </div>
+                            <p class="ml-3 text-neutral-600">
+                                <strong class="font-semibold">方向性差异</strong>：下行总上客量（45人）高于上行（28人），主城区向郊区通勤为主
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 card-shadow">
+                    <h3 class="text-xl font-bold text-neutral-800 mb-4">上下行客流对比</h3>
+                    <div class="h-80" id="passenger-flow-chart"></div>
+                </div>
+            </div>
+
+            <!-- 运营问题 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl p-6 card-shadow hover-scale">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-orange-100 p-3 rounded-lg">
+                            <i class="fa-solid fa-road text-warning text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-neutral-800 ml-4">运营问题</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-warning/10 p-1.5 rounded-full mt-1">
+                                <i class="fa-solid fa-circle-dot text-warning text-sm"></i>
+                            </div>
+                            <p class="ml-3 text-neutral-600">
+                                <strong class="font-semibold">效率偏低</strong>：八公里→轨道六公里段时速21.1km/h，会展中心→南坪南路时速30.9km/h，波动大
+                            </p>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-warning/10 p-1.5 rounded-full mt-1">
+                                <i class="fa-solid fa-circle-dot text-warning text-sm"></i>
+                            </div>
+                            <p class="ml-3 text-neutral-600">
+                                <strong class="font-semibold">资源配置</strong>：上下行发车间隔未差异化，轨道接驳站未加密班次
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 card-shadow">
+                    <h3 class="text-xl font-bold text-neutral-800 mb-4">拥堵路段时速对比</h3>
+                    <div class="h-80" id="speed-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 优化方案 -->
+        <section id="optimization-scheme" class="mb-20 section-fade">
+            <div class="flex flex-col md:flex-row justify-between items-start mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-neutral-800 flex items-center">
+                    <span class="bg-success text-white p-2 rounded-lg mr-3">02</span>
+                    优化方案设计
+                </h2>
+                <div class="hidden md:block h-1 bg-gray-200 flex-grow mx-4 mt-6"></div>
+                <div class="md:w-64 mt-4 md:mt-0">
+                    <div class="bg-green-50 border border-green-100 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-lightbulb text-success mr-2"></i>
+                            <span class="font-medium">解决方案</span>
+                        </div>
+                        <p class="text-sm text-neutral-600 mt-2">线路优化、站点调整、智能调度、差异化发车间隔</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案切换 -->
+            <div class="bg-white rounded-xl p-6 card-shadow mb-8">
+                <div class="flex flex-wrap justify-center mb-8">
+                    <button id="scheme1-btn" class="scheme-btn bg-primary text-white px-6 py-3 rounded-full font-medium shadow-lg hover:shadow-primary/20 transition-all">
+                        <i class="fa-solid fa-road mr-2"></i>方案一：静态线路优化
+                    </button>
+                    <button id="scheme2-btn" class="scheme-btn bg-white text-neutral-600 px-6 py-3 rounded-full font-medium shadow-md hover:shadow-lg transition-all ml-4">
+                        <i class="fa-solid fa-bolt mr-2"></i>方案二：动态智能优化
+                    </button>
+                </div>
+
+                <!-- 方案内容 -->
+                <div id="scheme1-content" class="scheme-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-bold text-neutral-800 mb-4">优化措施</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="bg-primary/10 p-1.5 rounded-full mt-1">
+                                        <i class="fa-solid fa-plus text-primary text-sm"></i>
+                                    </div>
+                                    <p class="ml-3 text-neutral-600">
+                                        <strong class="font-semibold">线路调整</strong>：新增轨道南坪站，下行绕行南城大道
+                                    </p>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-primary/10 p-1.5 rounded-full mt-1">
+                                        <i class="fa-solid fa-arrows-alt-h text-primary text-sm"></i>
+                                    </div>
+                                    <p class="ml-3 text-neutral-600">
+                                        <strong class="font-semibold">站点优化</strong>：合并巴南大道中与巴南大道站，拆分麒龙站-八公里段
+                                    </p>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-primary/10 p-1.5 rounded-full mt-1">
+                                        <i class="fa-solid fa-clock text-primary text-sm"></i>
+                                    </div>
+                                    <p class="ml-3 text-neutral-600">
+                                        <strong class="font-semibold">发车间隔</strong>：下行班次加密至8分钟/班，上行12分钟/班
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded-lg p-5">
+                            <h3 class="text-lg font-bold text-neutral-800 mb-4">评价指标</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm font-medium">便捷度</span>
+                                        <span class="text-sm font-semibold text-primary">95%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-primary h-2 rounded-full" style="width: 95%"></div>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">换乘时间缩短15%，500米覆盖率95%</p>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm font-medium">可靠度</span>
+                                        <span class="text-sm font-semibold text-primary">85%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-primary h-2 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">时速≥25km，拥堵路段时速提升20%</p>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm font-medium">安全度</span>
+                                        <span class="text-sm font-semibold text-primary">95%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-primary h-2 rounded-full" style="width: 95%"></div>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">超载率≤110%，控制在105%以内</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="scheme2-content" class="scheme-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2">
+                            <h3 class="text-xl font-bold text-neutral-800 mb-4">优化措施</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="bg-secondary/10 p-1.5 rounded-full mt-1">
+                                        <i class="fa-solid fa-plus text-secondary text-sm"></i>
+                                    </div>
+                                    <p class="ml-3 text-neutral-600">
+                                        <strong class="font-semibold">线路调整</strong>：新增丽都锦城站，优化六公里站接驳
+                                    </p>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-secondary/10 p-1.5 rounded-full mt-1">
+                                        <i class="fa-solid fa-minus text-secondary text-sm"></i>
+                                    </div>
+                                    <p class="ml-3 text-neutral-600">
+                                        <strong class="font-semibold">站点优化</strong>：会展中心晚高峰响应式停靠，取消李家沱东站
+                                    </p>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-secondary/10 p-1.5 rounded-full mt-1">
+                                        <i class="fa-solid fa-brain text-secondary text-sm"></i>
+                                    </div>
+                                    <p class="ml-3 text-neutral-600">
+                                        <strong class="font-semibold">智能调度</strong>：动态班次（6-10分钟/班），车载传感器调度
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-orange-50 rounded-lg p-5">
+                            <h3 class="text-lg font-bold text-neutral-800 mb-4">评价指标</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm font-medium">便捷度</span>
+                                        <span class="text-sm font-semibold text-secondary">90%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-secondary h-2 rounded-full" style="width: 90%"></div>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">换乘距离≤100米，换乘时间减少20%</p>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm font-medium">可靠度</span>
+                                        <span class="text-sm font-semibold text-secondary">92%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-secondary h-2 rounded-full" style="width: 92%"></div>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">准点率≥92%，时速提升15%</p>
+                                </div>
+                                
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm font-medium">安全度</span>
+                                        <span class="text-sm font-semibold text-secondary">98%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-secondary h-2 rounded-full" style="width: 98%"></div>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">超载率≤100%，控制在95%以下</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 方案对比 -->
+        <section id="comparison" class="mb-20 section-fade">
+            <div class="flex flex-col md:flex-row justify-between items-start mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-neutral-800 flex items-center">
+                    <span class="bg-purple-600 text-white p-2 rounded-lg mr-3">03</span>
+                    方案对比分析
+                </h2>
+                <div class="hidden md:block h-1 bg-gray-200 flex-grow mx-4 mt-6"></div>
+                <div class="md:w-64 mt-4 md:mt-0">
+                    <div class="bg-purple-50 border border-purple-100 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-balance-scale text-purple-600 mr-2"></i>
+                            <span class="font-medium">综合评估</span>
+                        </div>
+                        <p class="text-sm text-neutral-600 mt-2">根据多维度指标对比，选择最优方案</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 card-shadow mb-8">
+                <h3 class="text-xl font-bold text-neutral-800 mb-6">方案综合对比</h3>
+                <div class="h-96" id="comparison-chart"></div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 card-shadow">
+                <h3 class="text-xl font-bold text-neutral-800 mb-6">多维度对比</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">维度</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">方案一</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">方案二</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                        <span class="text-sm font-medium text-neutral-800">服务性</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">基础提升，灵活性一般</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">动态管理，服务更优</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                        <span class="text-sm font-medium text-neutral-800">经济性</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">低成本，短期效益</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">高投入，长期经济</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                                        <span class="text-sm font-medium text-neutral-800">可持续性</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">中等</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">高</span>
+                                </td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                        <span class="text-sm font-medium text-neutral-800">技术难度</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">低</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-neutral-600">高</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 推荐方案 -->
+        <section class="mb-16 section-fade">
+            <div class="bg-gradient-to-r from-primary/90 to-primary rounded-2xl p-8 text-white shadow-xl">
+                <div class="flex flex-col md:flex-row items-start">
+                    <div class="md:w-1/3 mb-6 md:mb-0">
+                        <div class="bg-white/10 p-4 rounded-xl mb-4">
+                            <i class="fa-solid fa-trophy text-4xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2">推荐方案</h3>
+                        <p class="text-white/80">基于综合评估，建议优先采用方案二</p>
+                    </div>
+                    <div class="md:w-2/3 md:ml-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white/10 backdrop-blur-sm p-5 rounded-xl">
+                                <h4 class="font-bold text-lg mb-3">推荐理由</h4>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start">
+                                        <i class="fa-solid fa-check-circle mt-1 mr-2"></i>
+                                        <span>动态调度系统能更好适应客流波动</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa-solid fa-check-circle mt-1 mr-2"></i>
+                                        <span>长期经济效益显著，技术升级潜力大</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa-solid fa-check-circle mt-1 mr-2"></i>
+                                        <span>符合智慧交通发展趋势</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-sm p-5 rounded-xl">
+                                <h4 class="font-bold text-lg mb-3">实施建议</h4>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start">
+                                        <i class="fa-solid fa-lightbulb mt-1 mr-2"></i>
+                                        <span>分阶段实施，先试点关键路段</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa-solid fa-lightbulb mt-1 mr-2"></i>
+                                        <span>建立智能调度系统和数据采集平台</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa-solid fa-lightbulb mt-1 mr-2"></i>
+                                        <span>加强与轨道交通的协同调度</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-neutral-800 text-white py-12">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fa-solid fa-bus text-primary text-2xl mr-3"></i>
+                        <span class="text-xl font-bold">重庆公交10路优化分析</span>
+                    </div>
+                    <p class="text-neutral-400 mb-4">基于数据驱动的公交优化解决方案，提升城市公共交通服务水平</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-neutral-400 hover:text-primary transition-colors">
+                            <i class="fa-brands fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-neutral-400 hover:text-primary transition-colors">
+                            <i class="fa-brands fa-weibo text-xl"></i>
+                        </a>
+                        <a href="#" class="text-neutral-400 hover:text-primary transition-colors">
+                            <i class="fa-brands fa-qq text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">快速链接</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#current-situation" class="text-neutral-400 hover:text-primary transition-colors">运行现状</a></li>
+                        <li><a href="#optimization-scheme" class="text-neutral-400 hover:text-primary transition-colors">优化方案</a></li>
+                        <li><a href="#comparison" class="text-neutral-400 hover:text-primary transition-colors">方案对比</a></li>
+                        <li><a href="#" class="text-neutral-400 hover:text-primary transition-colors">联系我们</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">联系方式</h4>
+                    <ul class="space-y-2">
+                        <li class="flex items-center">
+                            <i class="fa-solid fa-map-marker-alt text-primary mr-3"></i>
+                            <span class="text-neutral-400">重庆市交通规划研究院</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa-solid fa-phone text-primary mr-3"></i>
+                            <span class="text-neutral-400">023-12345678</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa-solid fa-envelope text-primary mr-3"></i>
+                            <span class="text-neutral-400">contact@cqbusplan.com</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-neutral-700 mt-8 pt-8 text-center text-neutral-500 text-sm">
+                <p>© 2025 重庆公交优化项目组. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 导航栏滚动效果
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('shadow-md');
+                navbar.classList.add('bg-white');
+                navbar.classList.remove('bg-white/90');
+            } else {
+                navbar.classList.remove('shadow-md');
+                navbar.classList.add('bg-white/90');
+                navbar.classList.remove('bg-white');
+            }
+        });
+
+        // 移动端菜单
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuToggle.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                    // 关闭移动菜单
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        // 方案切换
+        const scheme1Btn = document.getElementById('scheme1-btn');
+        const scheme2Btn = document.getElementById('scheme2-btn');
+        const scheme1Content = document.getElementById('scheme1-content');
+        const scheme2Content = document.getElementById('scheme2-content');
+
+        scheme1Btn.addEventListener('click', () => {
+            scheme1Btn.classList.add('bg-primary', 'text-white', 'shadow-lg', 'hover:shadow-primary/20');
+            scheme1Btn.classList.remove('bg-white', 'text-neutral-600', 'shadow-md');
+            scheme2Btn.classList.add('bg-white', 'text-neutral-600', 'shadow-md');
+            scheme2Btn.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'hover:shadow-primary/20');
+            scheme1Content.classList.remove('hidden');
+            scheme2Content.classList.add('hidden');
+        });
+
+        scheme2Btn.addEventListener('click', () => {
+            scheme2Btn.classList.add('bg-secondary', 'text-white', 'shadow-lg', 'hover:shadow-secondary/20');
+            scheme2Btn.classList.remove('bg-white', 'text-neutral-600', 'shadow-md');
+            scheme1Btn.classList.add('bg-white', 'text-neutral-600', 'shadow-md');
+            scheme1Btn.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'hover:shadow-primary/20');
+            scheme2Content.classList.remove('hidden');
+            scheme1Content.classList.add('hidden');
+        });
+
+        // 滚动动画
+        const fadeElements = document.querySelectorAll('.section-fade');
+        const fadeInObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    fadeInObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        fadeElements.forEach(element => {
+            fadeInObserver.observe(element);
+        });
+
+        // 客流对比图表
+        const passengerFlowChart = echarts.init(document.getElementById('passenger-flow-chart'));
+        passengerFlowChart.setOption({
+            title: {
+                text: '上下行客流对比',
+                left: 'center',
+                textStyle: {
+                    color: '#1D2129',
+                    fontSize: 16,
+                    fontWeight: 'bold'
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: ['上行', '下行'],
+                axisTick: {
+                    alignWithLabel: true
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: '#E5E6EB'
+                    }
+                },
+                axisLabel: {
+                    color: '#4E5969'
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '客流量（人）',
+                min: 0,
+                max: 60,
+                interval: 15,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E5E6EB'
+                    }
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#F2F3F5'
+                    }
+                },
+                axisLabel: {
+                    color: '#4E5969'
+                }
+            },
+            series: [{
+                name: '客流量',
+                type: 'bar',
+                barWidth: '40%',
+                data: [28, 45],
+                itemStyle: {
+                    color: '#165DFF',
+                    borderRadius: [4, 4, 0, 0]
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    color: '#1D2129'
+                }
+            }]
+        });
+
+        // 时速对比图表
+        const speedChart = echarts.init(document.getElementById('speed-chart'));
+        speedChart.setOption({
+            title: {
+                text: '拥堵路段时速对比',
+                left: 'center',
+                textStyle: {
+                    color: '#1D2129',
+                    fontSize: 16,
+                    fontWeight: 'bold'
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: ['八公里→轨道六公里', '会展中心→南坪南路'],
+                axisTick: {
+                    alignWithLabel: true
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: '#E5E6EB'
+                    }
+                },
+                axisLabel: {
+                    color: '#4E5969',
+                    interval: 0,
+                    rotate: 15
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '时速（km/h）',
+                min: 0,
+                max: 40,
+                interval: 10,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E5E6EB'
+                    }
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#F2F3F5'
+                    }
+                },
+                axisLabel: {
+                    color: '#4E5969'
+                }
+            },
+            series: [{
+                name: '时速',
+                type: 'bar',
+                barWidth: '40%',
+                data: [21.1, 30.9],
+                itemStyle: {
+                    color: '#FF7D00',
+                    borderRadius: [4, 4, 0, 0]
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    color: '#1D2129',
+                    formatter: function(params) {
+                        return params.value + 'km/h';
+                    }
+                }
+            }]
+        });
+
+        // 方案对比雷达图
+        const comparisonChart = echarts.init(document.getElementById('comparison-chart'));
+        comparisonChart.setOption({
+            title: {
+                text: '方案综合对比',
+                left: 'center',
+                textStyle: {
+                    color: '#1D2129',
+                    fontSize: 16,
+                    fontWeight: 'bold'
+                }
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c}'
+            },
+            radar: {
+                shape: 'circle',
+                indicator: [
+                    { name: '服务性', max: 5 },
+                    { name: '经济性', max: 5 },
+                    { name: '可持续性', max: 5 },
+                    { name: '技术难度', max: 5 }
+                ],
+                axisName: {
+                    color: '#4E5969',
+                    fontSize: 12
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#F2F3F5'
+                    }
+                },
+                splitArea: {
+                    show: true,
+                    areaStyle: {
+                        color: ['rgba(22, 93, 255, 0.05)', 'rgba(22, 93, 255, 0.1)']
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: '#E5E6EB'
+                    }
+                }
+            },
+            series: [{
+                name: '方案对比',
+                type: 'radar',
+                data: [
+                    {
+                        value: [3, 4, 3, 2],
+                        name: '方案一',
+                        itemStyle: {
+                            color: '#165DFF'
+                        },
+                        areaStyle: {
+                            color: 'rgba(22, 93, 255, 0.3)'
+                        },
+                        lineStyle: {
+                            width: 2
+                        }
+                    },
+                    {
+                        value: [4, 3, 5, 4],
+                        name: '方案二',
+                        itemStyle: {
+                            color: '#FF7D00'
+                        },
+                        areaStyle: {
+                            color: 'rgba(255, 125, 0, 0.3)'
+                        },
+                        lineStyle: {
+                            width: 2
+                        }
+                    }
+                ]
+            }]
+        });
+
+        // 图表响应式
+        window.addEventListener('resize', () => {
+            passengerFlowChart.resize();
+            speedChart.resize();
+            comparisonChart.resize();
+        });
+    </script>
+</body>
+</html>
+    
